@@ -1,101 +1,193 @@
-import Image from "next/image";
+"use client";
 
-export default function Home() {
+import React, { useState, useEffect } from "react";
+
+const TILE_SIZE = 40;
+const PLAYER_SIZE = 30;
+const GOAL_SIZE = 30;
+
+const MAPS = [
+  [
+    [1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+    [1, 0, 0, 0, 1, 0, 0, 0, 0, 1],
+    [1, 0, 1, 0, 1, 0, 1, 1, 0, 1],
+    [1, 0, 1, 0, 0, 0, 0, 1, 0, 1],
+    [1, 0, 1, 1, 1, 1, 0, 1, 0, 1],
+    [1, 0, 0, 0, 0, 1, 0, 0, 0, 1],
+    [1, 1, 1, 1, 0, 1, 1, 1, 1, 1],
+    [1, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+    [1, 1, 1, 1, 1, 1, 1, 1, 0, 1],
+    [1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+  ],
+  [
+    [1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+    [1, 0, 0, 1, 0, 0, 1, 0, 0, 1],
+    [1, 0, 1, 1, 0, 1, 1, 1, 0, 1],
+    [1, 0, 0, 0, 0, 0, 0, 1, 0, 1],
+    [1, 1, 1, 1, 0, 1, 0, 1, 0, 1],
+    [1, 0, 0, 0, 0, 1, 0, 1, 0, 1],
+    [1, 0, 1, 1, 1, 1, 0, 1, 0, 1],
+    [1, 0, 1, 0, 0, 0, 0, 0, 0, 1],
+    [1, 0, 1, 1, 1, 1, 1, 1, 1, 1],
+    [1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+  ],
+];
+
+const getGoalPosition = (maze: number[][]) => {
+  for (let y = maze.length - 1; y >= 0; y--) {
+    for (let x = maze[0].length - 1; x >= 0; x--) {
+      if (maze[y][x] === 0) {
+        return { x, y };
+      }
+    }
+  }
+  return { x: 1, y: 1 }; // Fallback
+};
+
+const MazeEscape: React.FC = () => {
+  const [maze, setMaze] = useState(MAPS[0]);
+  const [player, setPlayer] = useState({ x: 1, y: 1 });
+  const [goal, setGoal] = useState(getGoalPosition(MAPS[0]));
+  const [timer, setTimer] = useState(0);
+  const [gameOver, setGameOver] = useState(false);
+  const [round, setRound] = useState(1);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      if (!gameOver) setTimer((prev) => prev + 1);
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [gameOver]);
+
+  const handleKeyDown = (e: KeyboardEvent) => {
+    if (gameOver) return;
+
+    setPlayer((prev) => {
+      const { x, y } = prev;
+      let newX = x;
+      let newY = y;
+
+      if (e.key === "ArrowUp" && maze[y - 1][x] === 0) newY--;
+      if (e.key === "ArrowDown" && maze[y + 1][x] === 0) newY++;
+      if (e.key === "ArrowLeft" && maze[y][x - 1] === 0) newX--;
+      if (e.key === "ArrowRight" && maze[y][x + 1] === 0) newX++;
+
+      if (newX === goal.x && newY === goal.y) {
+        setGameOver(true);
+        setTimeout(startNextRound, 1000); // Delay next round by 1 second
+      }
+
+      return { x: newX, y: newY };
+    });
+  };
+
+  useEffect(() => {
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [maze, player, goal, gameOver]);
+
+  const startNextRound = () => {
+    const nextMapIndex = round % MAPS.length;
+    const newMaze = MAPS[nextMapIndex];
+    setMaze(newMaze);
+    setPlayer({ x: 1, y: 1 });
+    setGoal(getGoalPosition(newMaze));
+    setTimer(0);
+    setGameOver(false);
+    setRound((prev) => prev + 1);
+  };
+
+  const restartGame = () => {
+    setMaze(MAPS[0]);
+    setPlayer({ x: 1, y: 1 });
+    setGoal(getGoalPosition(MAPS[0]));
+    setTimer(0);
+    setGameOver(false);
+    setRound(1);
+  };
+
   return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-8 row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-semibold">
-              app/page.tsx
-            </code>
-            .
-          </li>
-          <li>Save and see your changes instantly.</li>
-        </ol>
-
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
+    <div
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        justifyContent: "center",
+        minHeight: "100vh",
+        backgroundColor: "#222",
+        color: "#fff",
+      }}
+    >
+      <h1>Maze Escape</h1>
+      <p>
+        <strong>Controls:</strong> Arrow Keys to Move
+      </p>
+      <p>Round: {round}</p>
+      <p>Time: {timer}s</p>
+      {gameOver && <h2>Round {round} Complete!</h2>}
+      <div
+        style={{
+          position: "relative",
+          width: `${maze[0].length * TILE_SIZE}px`,
+          height: `${maze.length * TILE_SIZE}px`,
+          backgroundColor: "#333",
+          border: "2px solid white",
+        }}
+      >
+        {maze.map((row, rowIndex) =>
+          row.map((cell, colIndex) => (
+            <div
+              key={`${rowIndex}-${colIndex}`}
+              style={{
+                position: "absolute",
+                top: rowIndex * TILE_SIZE,
+                left: colIndex * TILE_SIZE,
+                width: TILE_SIZE,
+                height: TILE_SIZE,
+                backgroundColor: cell === 1 ? "#444" : "transparent",
+                border: cell === 1 ? "1px solid #222" : "none",
+              }}
             />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:min-w-44"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
-        </div>
-      </main>
-      <footer className="row-start-3 flex gap-6 flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
+          ))
+        )}
+        <div
+          style={{
+            position: "absolute",
+            top: player.y * TILE_SIZE + (TILE_SIZE - PLAYER_SIZE) / 2,
+            left: player.x * TILE_SIZE + (TILE_SIZE - PLAYER_SIZE) / 2,
+            width: PLAYER_SIZE,
+            height: PLAYER_SIZE,
+            backgroundColor: "blue",
+          }}
+        />
+        <div
+          style={{
+            position: "absolute",
+            top: goal.y * TILE_SIZE + (TILE_SIZE - GOAL_SIZE) / 2,
+            left: goal.x * TILE_SIZE + (TILE_SIZE - GOAL_SIZE) / 2,
+            width: GOAL_SIZE,
+            height: GOAL_SIZE,
+            backgroundColor: "gold",
+          }}
+        />
+      </div>
+      <button
+        onClick={restartGame}
+        style={{
+          marginTop: "20px",
+          padding: "10px 20px",
+          fontSize: "16px",
+          cursor: "pointer",
+          backgroundColor: "#444",
+          color: "white",
+          border: "2px solid #fff",
+          borderRadius: "5px",
+        }}
+      >
+        Restart
+      </button>
     </div>
   );
-}
+};
+
+export default MazeEscape;
